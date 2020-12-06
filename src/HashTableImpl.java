@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class HashTableImpl<K, V> {
     private final static double MAX_LOAD_FACTOR = .70;
@@ -9,29 +10,38 @@ public class HashTableImpl<K, V> {
 
     private double size;
 
-
     public HashTableImpl() {
         this.table = new HashTableEntry[INITIAL_TABLE_SIZE];
         table_size = INITIAL_TABLE_SIZE;
     }
 
     public HashTableEntry<K, V> get(K key) {
-        if (table[hashFunc(key)] != null ) {
-            return table[hashFunc(key)];
+        int hashIndex = hashFunc(key);
+        int initialIndex = hashIndex;
+        while (table[hashIndex] != null && calculateDIB(initialIndex, hashIndex) <= calculateDIB(hashFunc((K) (table[hashIndex].getKey())), hashIndex)) {
+            if (table[hashIndex].getKey().equals(key)) {
+                return table[hashIndex];
+            }
+            hashIndex++;
         }
         return null;
     }
 
     public void put(K key, V value) {
-        System.out.println((size / (double) table_size));
+//        System.out.println(count());
         if (!hasEnoughPlace()) {
             resize();
         }
         int hashIndex = hashFunc(key);
 
+        if (table[hashIndex] != null && table[hashIndex].getKey().equals(key)) {
+            table[hashIndex].setValue(value);
+            return;
+        }
 
         if (table[hashIndex] != null && !table[hashIndex].getKey().equals(key)) {
 //            System.out.println("collision");
+            collisionHandler(key, value);
             return;
         }
 
@@ -39,6 +49,43 @@ public class HashTableImpl<K, V> {
             size++;
         }
         table[hashIndex] = new HashTableEntry<>(key, value);
+        table[hashIndex].setCode(hashCode(key));
+    }
+
+    private void collisionHandler(K key, V value) {
+        int hash = hashFunc(key);
+
+        int initialIndex = hash;
+
+        if (hash >= table_size) {
+            resize();
+        }
+
+        while (table[hash] != null && calculateDIB(initialIndex, hash) <= calculateDIB(hashFunc((K) (table[hash].getKey())), hash)) {
+            hash++;
+            if (hash >= table_size) {
+                resize();
+            }
+            if (table[hash] != null && table[hash].getKey().equals(key)) {
+                table[hash].setValue(value);
+                return;
+            }
+        }
+
+        if (table[hash] == null) {
+            table[hash] = new HashTableEntry<>(key, value);
+        } else {
+            HashTableEntry<K,V> temp = table[hash];
+            table[hash] = new HashTableEntry<>(key, value);
+            collisionHandler(temp.getKey(), temp.getValue());
+        }
+
+
+
+    }
+
+    private int calculateDIB(int initialIndex, int hash) {
+        return hash - initialIndex;
     }
 
     private void resize() {
@@ -49,13 +96,11 @@ public class HashTableImpl<K, V> {
                 oldTable.add(entry);
             }
         }
-        System.out.println(size);
 
         table_size = table_size * 2;
         size = 0;
 
         table = new HashTableEntry[table_size];
-        System.out.println("resizing...");
 
         for (HashTableEntry<K,V> entry:
              oldTable) {
@@ -66,15 +111,27 @@ public class HashTableImpl<K, V> {
 
     }
 
-    private int hashFunc(K key) {
-        return PAF((String) key) % table_size;
+    public int count() {
+        int counter = 0;
+        for (int i = 0; i < table.length; i++) {
+            if (table[i] != null) {
+                System.out.println(table[i].toString() + " index= " + i);
+                counter++;
+            }
+        }
+        return counter;
     }
 
-    private int PAF(String s) {
+    private int hashFunc(K key) {
+        return hashCode(key) % table_size;
+    }
+
+    private int hashCode(K key) {
+        String s = (String) key;
         int sum = 0;
         int z = 33;
         for (int i = 0; i < s.length(); i++) {
-            sum += ((int) s.toLowerCase().charAt(i) - 96) * Math.pow(z, s.length() - (i + 1));
+            sum += ((int) s.toLowerCase(Locale.ENGLISH).charAt(i) - 96) * Math.pow(z, s.length() - (i + 1));
         }
         return Math.abs(sum);
     }

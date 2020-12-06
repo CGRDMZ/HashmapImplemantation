@@ -1,10 +1,19 @@
 public class HashTableEntry<K, V> {
     private K key;
     private V value;
+    private int code;
 
     public HashTableEntry(K key, V value) {
         this.key = key;
         this.value = value;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
     }
 
     public K getKey() {
