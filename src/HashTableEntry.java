@@ -2,6 +2,7 @@ public class HashTableEntry<K, V> {
     private K key;
     private V value;
     private int code;
+    private int index;
 
     public HashTableEntry(K key, V value) {
         this.key = key;
@@ -24,6 +25,14 @@ public class HashTableEntry<K, V> {
         this.key = key;
     }
 
+    public int getIndex() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
+    }
+
     public V getValue() {
         return value;
     }
@@ -32,8 +41,4 @@ public class HashTableEntry<K, V> {
         this.value = value;
     }
 
-    @Override
-    public String toString() {
-        return "key: " + key + " value: " + value;
-    }
 }

@@ -2,23 +2,36 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class HashTableImpl<K, V> {
-    private final static double MAX_LOAD_FACTOR = .70;
+    private static double MAX_LOAD_FACTOR;
+    private final static double DEFAULT_LOAD_FACTOR = 0.7;
     private static final int INITIAL_TABLE_SIZE = 997;
 
-    private HashTableEntry[] table;
-    private int table_size;
+    private HashTableEntry<K, V>[] table;
+    private int tableSize;
 
-    private double size;
+    private int collisionCount;
 
-    public HashTableImpl() {
+    private long size;
+
+    private HashService<K> hashService;
+
+    public HashTableImpl(double loadFactor) {
         this.table = new HashTableEntry[INITIAL_TABLE_SIZE];
-        table_size = INITIAL_TABLE_SIZE;
+        tableSize = INITIAL_TABLE_SIZE;
+        collisionCount = 0;
+        MAX_LOAD_FACTOR = loadFactor;
     }
 
+    public HashTableImpl() {
+        this(DEFAULT_LOAD_FACTOR);
+    }
+
+
     public HashTableEntry<K, V> get(K key) {
-        int hashIndex = hashFunc(key);
+        int hashIndex = hashFunc(hashCode(key));
         int initialIndex = hashIndex;
-        while (table[hashIndex] != null && calculateDIB(initialIndex, hashIndex) <= calculateDIB(hashFunc((K) (table[hashIndex].getKey())), hashIndex)) {
+        while (table[hashIndex] != null
+                && calculateDIB(initialIndex, hashIndex) <= calculateDIB(hashFunc((table[hashIndex].getCode())), hashIndex)) {
             if (table[hashIndex].getKey().equals(key)) {
                 return table[hashIndex];
             }
@@ -27,12 +40,22 @@ public class HashTableImpl<K, V> {
         return null;
     }
 
+    public void print(K key) {
+        HashTableEntry entry = get(key);
+        if (entry == null) {
+            System.out.println("Not Found.");
+            return;
+        }
+        System.out.printf("search: %s \nkey: %s \ncount: %s \nindex: %d\n---------------------------------%n", entry.getKey(), entry.getCode(), entry.getValue(), entry.getIndex());
+    }
+
+
     public void put(K key, V value) {
-//        System.out.println(count());
+//        System.out.println(size());
         if (!hasEnoughPlace()) {
             resize();
         }
-        int hashIndex = hashFunc(key);
+        int hashIndex = hashFunc(hashCode(key));
 
         if (table[hashIndex] != null && table[hashIndex].getKey().equals(key)) {
             table[hashIndex].setValue(value);
@@ -50,20 +73,23 @@ public class HashTableImpl<K, V> {
         }
         table[hashIndex] = new HashTableEntry<>(key, value);
         table[hashIndex].setCode(hashCode(key));
+        table[hashIndex].setIndex(hashIndex);
     }
 
     private void collisionHandler(K key, V value) {
-        int hash = hashFunc(key);
+        int hash = hashFunc(hashCode(key));
 
         int initialIndex = hash;
 
-        if (hash >= table_size) {
+        if (hash >= tableSize) {
             resize();
         }
 
-        while (table[hash] != null && calculateDIB(initialIndex, hash) <= calculateDIB(hashFunc((K) (table[hash].getKey())), hash)) {
+        collisionCount++;
+
+        while (table[hash] != null && calculateDIB(initialIndex, hash) <= calculateDIB(hashFunc(table[hash].getCode()), hash)) {
             hash++;
-            if (hash >= table_size) {
+            if (hash >= tableSize) {
                 resize();
             }
             if (table[hash] != null && table[hash].getKey().equals(key)) {
@@ -73,15 +99,23 @@ public class HashTableImpl<K, V> {
         }
 
         if (table[hash] == null) {
+            size++;
             table[hash] = new HashTableEntry<>(key, value);
+            table[hash].setCode(hashCode(key));
+            table[hash].setIndex(hash);
         } else {
-            HashTableEntry<K,V> temp = table[hash];
+            HashTableEntry<K, V> temp = table[hash];
             table[hash] = new HashTableEntry<>(key, value);
+            table[hash].setCode(hashCode(key));
+            table[hash].setIndex(hash);
             collisionHandler(temp.getKey(), temp.getValue());
         }
 
 
+    }
 
+    public int getCollisionCount() {
+        return collisionCount;
     }
 
     private int calculateDIB(int initialIndex, int hash) {
@@ -89,7 +123,7 @@ public class HashTableImpl<K, V> {
     }
 
     private void resize() {
-        ArrayList<HashTableEntry<K,V>> oldTable = new ArrayList<>();
+        ArrayList<HashTableEntry<K, V>> oldTable = new ArrayList<>();
         for (HashTableEntry entry :
                 table) {
             if (entry != null) {
@@ -97,13 +131,13 @@ public class HashTableImpl<K, V> {
             }
         }
 
-        table_size = table_size * 2;
+        tableSize = tableSize * 2;
         size = 0;
 
-        table = new HashTableEntry[table_size];
+        table = new HashTableEntry[tableSize];
 
-        for (HashTableEntry<K,V> entry:
-             oldTable) {
+        for (HashTableEntry<K, V> entry :
+                oldTable) {
             put(entry.getKey(), entry.getValue());
         }
 
@@ -111,33 +145,31 @@ public class HashTableImpl<K, V> {
 
     }
 
-    public int count() {
-        int counter = 0;
-        for (int i = 0; i < table.length; i++) {
-            if (table[i] != null) {
-                System.out.println(table[i].toString() + " index= " + i);
-                counter++;
-            }
-        }
-        return counter;
+    public int size() {
+        //uncomment this for exact size, if you think there is a problem with the size variable.
+//        int counter = 0;
+//        for (int i = 0; i < table.length; i++) {
+//            if (table[i] != null) {
+//                counter++;
+//            }
+//        }
+        return (int) size;
     }
 
-    private int hashFunc(K key) {
-        return hashCode(key) % table_size;
+    public void setHashService(HashService<K> hashService) {
+        this.hashService = hashService;
+    }
+
+    private int hashFunc(int hashCode) {
+        return hashService.hashFunc(hashCode, tableSize);
     }
 
     private int hashCode(K key) {
-        String s = (String) key;
-        int sum = 0;
-        int z = 33;
-        for (int i = 0; i < s.length(); i++) {
-            sum += ((int) s.toLowerCase(Locale.ENGLISH).charAt(i) - 96) * Math.pow(z, s.length() - (i + 1));
-        }
-        return Math.abs(sum);
+        return hashService.hashCode(key);
     }
 
     private boolean hasEnoughPlace() {
-        return (size / (double) table_size) < MAX_LOAD_FACTOR;
+        return (size / (double) tableSize) < MAX_LOAD_FACTOR;
     }
 
 }
