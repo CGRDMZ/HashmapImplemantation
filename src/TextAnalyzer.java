@@ -4,10 +4,15 @@ import java.util.Locale;
 import java.util.Scanner;
 
 public class TextAnalyzer {
+    private static final String SEARCH_FILE_PATH = "./search.txt";
+    private static final String STORY_TEXT_PATH = "./story.txt";
+
     private HashTableImpl<String, Integer> words;
+
     private Scanner text;
     private Scanner keyValues;
     private Scanner userInput;
+
     private long indexingTime;
     private long averageSearchTime;
     private long minSearchTime;
@@ -15,10 +20,7 @@ public class TextAnalyzer {
 
 
     public TextAnalyzer() {
-
-
         setConfig();
-
         indexWords();
         searchFromFile();
         printMetadata();
@@ -27,16 +29,20 @@ public class TextAnalyzer {
         do {
             System.out.println("search the word: (\"-1\" for exit.)");
             input = userInput.next();
-            words.print(input);
+            if (!input.equals("-1")) {
+                words.print(input);
+            }
         } while (!input.equals("-1"));
 
     }
 
+
+
     private void setConfig() {
         try {
-            text = new Scanner(new File("./story.txt"));
+            text = new Scanner(new File(STORY_TEXT_PATH));
             text.useLocale(Locale.ENGLISH);
-            keyValues = new Scanner(new File("./search.txt"));
+            keyValues = new Scanner(new File(SEARCH_FILE_PATH));
             keyValues.useLocale(Locale.ENGLISH);
             userInput = new Scanner(System.in);
             userInput.useLocale(Locale.ENGLISH);
@@ -84,15 +90,17 @@ public class TextAnalyzer {
             }
         }
         indexingTime = System.nanoTime() - startTime;
+        text.close();
     }
 
     private void searchFromFile() {
-        long totalTimeStart = System.nanoTime();
+        long totalTime = 0;
         while (keyValues.hasNext()) {
             String s = keyValues.next().toLowerCase();
             long startTime = System.nanoTime();
             words.get(s);
             long searchTime = System.nanoTime() - startTime;
+            totalTime += searchTime;
             if (searchTime < minSearchTime) {
                 minSearchTime = searchTime;
             }
@@ -100,9 +108,12 @@ public class TextAnalyzer {
                 maxSearchTime = searchTime;
             }
         }
-        long totalTime = System.nanoTime() - totalTimeStart;
 
-        averageSearchTime = totalTime / words.size();
+        keyValues.close();
+
+        averageSearchTime = totalTime / getWordCountInAFile(SEARCH_FILE_PATH);
+
+
     }
 
     public void printMetadata() {
@@ -113,8 +124,24 @@ public class TextAnalyzer {
                         "Min. Search Time: %d nano seconds\n" +
                         "Max. Search Time: %d nano seconds\n" +
                         "-----------------------\n",
-                words.getCollisionCount(), indexingTime / 1000000000.0, averageSearchTime,
+                words.getCollisionCount(), indexingTime / 1000000000f, averageSearchTime,
                 minSearchTime, maxSearchTime);
         System.out.println("There are \"" + words.size() + "\" unique words.");
+    }
+
+    public static int getWordCountInAFile(String path) {
+        int counter = 0;
+        Scanner sc = null;
+        try {
+            sc = new Scanner(new File(path));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        while (sc.hasNext()) {
+            sc.next();
+            counter++;
+        }
+        sc.close();
+        return counter;
     }
 }

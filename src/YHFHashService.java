@@ -6,13 +6,13 @@ public class YHFHashService<K> implements HashService<K> {
         int hashCode = 0;
         byte[] byteArray = s.getBytes();
         for (int i = 0; i < byteArray.length; i++) {
-            hashCode += byteArray[i] * byteArray[byteArray.length - 1 - i] * 19;
+            hashCode += byteArray[i] * byteArray[byteArray.length - 1 - i] * p;
         }
         return Math.abs(hashCode);
     }
 
     @Override
     public int hashFunc(int hashCode, int tableSize) {
-        return hashCode % (tableSize-1);
+        return hashCode % (tableSize - 1);
     }
 }

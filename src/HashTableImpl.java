@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Locale;
 
 public class HashTableImpl<K, V> {
     private static double MAX_LOAD_FACTOR;
@@ -27,6 +26,7 @@ public class HashTableImpl<K, V> {
     }
 
 
+    // I have decided not to print the values in the get function, because it makes spam. I have used print function for printing any entry.
     public HashTableEntry<K, V> get(K key) {
         int hashIndex = hashFunc(hashCode(key));
         int initialIndex = hashIndex;
@@ -85,10 +85,11 @@ public class HashTableImpl<K, V> {
             resize();
         }
 
-        collisionCount++;
+
 
         while (table[hash] != null && calculateDIB(initialIndex, hash) <= calculateDIB(hashFunc(table[hash].getCode()), hash)) {
             hash++;
+            collisionCount++;
             if (hash >= tableSize) {
                 resize();
             }
